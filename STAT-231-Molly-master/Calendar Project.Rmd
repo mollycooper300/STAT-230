@@ -1,0 +1,83 @@
+---
+title: "Calendar Project"
+output: pdf_document
+---
+
+
+```{r}
+
+library(tidyverse) 
+library(lubridate) 
+library(ical)
+library(dplyr)
+library(mdsr)
+
+path <- "//Users/mollycooper/Downloads/Data Science/mcooper22@amherst.edu.ical (3)/mcooper22@amherst.edu.ics"
+filename <- "mcooper22@amherst.edu.ics"
+
+#Extracting the data from my calendar and importing it to R.
+my_calendar <- ical_parse_df(file = (path))%>% 
+  mutate(start_datetime = with_tz(start, tzone = "America/Los_Angeles")
+    , end_datetime = with_tz(end, tzone = "America/Los_Angeles")
+    , length_hour = end_datetime - start_datetime
+    , date = floor_date(start_datetime, unit = "day"))
+
+#Cleaning the data so it shows only relevant events in a readable format.
+mycalendar <- my_calendar %>%
+  mutate(activity = tolower(summary) , hours = (length_hour / 3600)) %>%
+  mutate(time = as.numeric(hours))%>%
+  filter(date > "2020-09-03" , activity == "sleep" | activity == "screen time") %>%
+  select(date , activity , time) %>%
+  group_by(date) 
+```
+
+
+```{r}
+library(kableExtra)
+
+#A table showing the relationship between hours of sleep and screentime.
+table <- mycalendar%>%
+  spread(key = activity, value = time)
+  
+table %>%
+  kable(caption = "Screen Time and Sleep Over 14 Days") %>%
+  kable_styling()
+
+```
+
+```{r}
+#Code for graph comparing sleep and screen time
+visual_one <- ggplot(data = table, mapping = aes( x = `screen time`, y = sleep, fill = date)) +
+geom_point() +
+geom_smooth(method = 'lm' , se = FALSE) 
+
+visual_one + ylab("Hours of Screen Time") + xlab("Hours of Sleep") + ggtitle("Does Your Screen Influence Your Sleep?")
+
+```
+
+```{r}
+library(lubridate)
+library(ggplot2)
+
+#splitting data set by avg week and weekday hours per activity
+dayofweek <- table %>%
+mutate(date = weekdays(ymd(date))) %>%
+mutate(date = ifelse(date == "Saturday" | date == "Sunday","Weekend","Weekday")) %>%
+group_by(date) %>%
+summarise(avgst = mean(`screen time`),
+          avgsleep = mean(sleep))
+#creating bar charts to compare
+sleep_visual <- ggplot(data = dayofweek, aes(x = date , y = avgsleep)) + 
+          geom_bar(fill = c("blue" , "navy blue") , stat = 'identity') +
+          theme(axis.text.x = element_text(angle = 90, hjust = 1))
+screen_visual <- ggplot(data = dayofweek, aes(x = date , y = avgst)) + 
+          geom_bar(fill = c("lavender" , "purple") , stat = 'identity') +
+          theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+          
+sleep_visual + ylab("Average Hours of Sleep") + xlab("Average for Weekday vs. Weekend") + ggtitle("When Do I Get More Zzzs?")
+screen_visual + ylab("Average Hours of Screen Time") + xlab("Average for Weekday vs. Weekend") +
+ggtitle("When Do I Use My Phone Most?")
+
+  
+```
+

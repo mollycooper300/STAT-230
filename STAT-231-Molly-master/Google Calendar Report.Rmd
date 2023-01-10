@@ -1,0 +1,135 @@
+---
+title: "Sleep and Screen Time"
+output: pdf_document
+author: "Molly Cooper"
+content: "Google Calendar Report"
+due: "Due Friday, September 25 by 5:00 PM EST"
+---
+
+How do I spend my time?
+```{r}
+# preliminary wrangling here
+
+library(tidyverse) 
+library(lubridate) 
+library(ical)
+library(dplyr)
+
+path <- "//Users/mollycooper/Downloads/Data Science/mcooper22@amherst.edu.ical (3)/mcooper22@amherst.edu.ics"
+filename <- "mcooper22@amherst.edu.ics"
+
+#Extracting the data from my calendar and importing it to R.
+my_calendar <- ical_parse_df(file = (path))%>% 
+  mutate(start_datetime = with_tz(start, tzone = "America/Los_Angeles")
+    , end_datetime = with_tz(end, tzone = "America/Los_Angeles")
+    , length_hour = end_datetime - start_datetime
+    , date = floor_date(start_datetime, unit = "day"))
+
+#Cleaning the data so it shows only relevant events in a readable format.
+mycalendar <- my_calendar %>%
+  mutate(activity = tolower(summary) , hours = (length_hour / 3600)) %>%
+  mutate(time = as.numeric(hours))%>%
+  filter(date > "2020-09-03" , activity == "sleep" | activity == "screen time") %>%
+  select(date , activity , time) %>%
+  group_by(date) 
+  
+```
+
+Exploratory Questions:
+
+(1) What is the relationship between screen time and sleep?
+(2) Is screen time more frequent during the week or weekend?
+(3) Do I sleep more hours during the week or weekend?
+
+Data Collection Process:
+
+For the past two weeks I monitored the hours of sleep per night I received and the hours of screen time I spent outside of class work and homework. I excluded class time and homework because I felt it made the data less applicable, given that COVID-19, has caused extenuating circumstances. Additionally, after doing some preliminary research, the screen time that influences sleep most is typically at night and caused by the blue light from your phone or close proximity/small surface area which can strain your eyes caused by excessive phone use. After collecting two weeks of data, I imported my calendar to R and filtered for hours of sleep and hours of screen time from each day I monitored. I then converted the time into hours (it was initially shown in seconds) and then labeled the variables more clearly. For different visualizations I manipulated the data set to refine and label the variables appropriately. 
+
+
+Table: 
+
+Below is a table depicting the relationship between hours of sleep and screen time per day. It is meant to show a detailed overview of the data I collected and the direct relationship between my key variables on an individual basis. 
+
+```{r}
+#insert table code
+library(kableExtra)
+
+#A table showing the relationship between hours of sleep and screentime.
+table <- mycalendar%>%
+  spread(key = activity, value = time)
+  
+table %>%
+  kable(caption = "Screen Time and Sleep Over 14 Days") %>%
+  kable_styling()
+```
+
+Visualization 1:
+
+Below is a scatter plot which demonstrates the holistic relationship between screen time and sleep retrieved from my data collection. The regression line more clearly demonstrates the negative correlation between hours of screen time and hours of sleep. 
+
+```{r}
+#insert visual one code
+#Code for graph comparing sleep and screen time
+visual_one <- ggplot(data = table, mapping = aes( x = `screen time`, y = sleep, fill = date)) +
+geom_point() +
+geom_smooth(method = 'lm' , se = FALSE) 
+
+visual_one + ylab("Hours of Screen Time") + xlab("Hours of Sleep") + ggtitle("Does Your Screen Influence Your Sleep?")
+```
+Visualization 2:
+
+Below is a bar plot demonstrating the delineation between hours of sleep on the week and the weekends and hours of sleep during the week. It clearly shows that I recieve more sleep on the weekend and spend more time on screens during the week. 
+
+```{r}
+#insert visual 2 code
+library(lubridate)
+library(ggplot2)
+
+#splitting data set by avg week and weekday hours per activity
+dayofweek <- table %>%
+mutate(date = weekdays(ymd(date))) %>%
+mutate(date = ifelse(date == "Saturday" | date == "Sunday","Weekend","Weekday")) %>%
+group_by(date) %>%
+summarise(avgst = mean(`screen time`),
+          avgsleep = mean(sleep))
+#creating bar charts to compare
+sleep_visual <- ggplot(data = dayofweek, aes(x = date , y = avgsleep)) + 
+          geom_bar(fill = c("blue" , "navy blue") , stat = 'identity') +
+          theme(axis.text.x = element_text(angle = 90, hjust = 1))
+screen_visual <- ggplot(data = dayofweek, aes(x = date , y = avgst)) + 
+          geom_bar(fill = c("lavender" , "purple") , stat = 'identity') +
+          theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+          
+sleep_visual + ylab("Average Hours of Sleep") + xlab("Average for Weekday vs. Weekend") + ggtitle("When Do I Get More Zzzs?")
+screen_visual + ylab("Average Hours of Screen Time") + xlab("Average for Weekday vs. Weekend") +
+ggtitle("When Do I Use My Phone Most?")
+```
+
+
+Analysis: 
+(1) What is the relationship between screen time and sleep?
+
+Given the clear negative slope of Visual 1 and the individual data in the table, it's clear that there is a negative correlation between hours of screen time and hours of sleep. It seems that, as I hypothesized and research has proven, the more time spent on a phone or laptop and correlates to a decrease in hours of sleep obtained. 
+
+(2) Is screen time more frequent during the week or weekend?
+
+Screen time appears to be less frequent during the weekend than during the week. This is shown by the ~45 minute difference in average hours of screen time spent between Monday-Friday and Saturday-Sunday. 
+
+(3) Do I sleep more hours during the week or weekend?
+
+I appear to sleep considerably longer hours during the weekend than the week. The ~1.5 average hour difference between Monday-Friday and Saturday-Sunday quantitatively proves how many more hours of sleep on average a weekend night afford me.
+
+
+Reflection
+
+One of my first difficulties in the data collection was figuring out how to create my "sleep" hours as an event which didn't stretch over two days in Google Calendar, because that was interfering with the R functions interpreting it correctly. I would say my two largest hurdles in gathering accurate data were: the multiple sources of technology which my screen time comes from and deciding how to evaluate what is/is not "screen time", and remembering to monitor my sleep schedule as accurately as possible, given that it's something I don't normally consider as precisely. I think my biggest initial hurdle once my calendar data was imported, was manipulating the raw information and creating an organized data frame. It took me a lot of trial and error to figure out how to create the variable necessary for organizing my visuals and manipulate the corresponding numbers to represent appropriate units (originally it was in seconds instead of hours). I also struggled to create my table, it took me a while to synthesize a way to represent "sleep" and "screen time" as two separate variables, grouped by date and valued by hours. The initial data was so far from this organization but I eventually recalled the spread function and after re-acquainting myself with the problem set in which we used this, I was able to display the data as desired. 
+
+In a future data collection/analysis project I would be more mindful of the way I record my data before importing it into a program (R/Sql/ect...). This would save me a considerable amount of time trying to discern errors which occurred after I was deep into the process of analyzing the data and cut back the time I spent cleaning my data.frame. Additionally, in the future I would have probably tried to find an app which automatically monitors my sleep rather than tracking it manually. This was how I recorded my screen time and I think it increased the level of precision and ease of data collection considerably. Overall, I think collecting and sorting through my own data gave me a greater appreciation for others who have done that in the past and would make me pay closer attention to the manner in which I record and collect data moving forward, at the end of the day it only strengthens the accuracy of your analysis as well. Although I struggled through aspects of the analysis I think it was simply a learning experience since I'm just beginning to build my skills in R.
+
+In order to answer my initial question of interest I would like to collect at least a year's worth of precise data, and to make it even more accurate I would be interested in collecting data from many other subjects as well. For the second two questions, there is more of a personal preference aspect involved and I think that 6 months to a year of collecting data on myself would be enough to accurately answer that question. To give the data the most applicability however, I would ideally record it during multiple seasons to argue for its consistency (or possible explore it's lack of...?) and also preferably during non-COVID times when life is a bit more average. I think this data would not be particularly difficult to collect on both counts given that sleep and screen time can easily be monitored through technological tracking. Even if some of my data came from other subjects, if there was a consistent monitoring software being used I would feel confident in the accuracy of my data with little human involvement. I think the main difficulty with continuing to run this experiment on myself is the implicit bias that comes with monitoring your habits and having some sort of hypothesis about the results. The most feasible and accurate way to understand these relationships would be to test them out on others who don't know what the experiment is measuring and are performing their most normal patterns of behavior. 
+
+As data collection, personal privacy, and liability/public safety has become an increasingly prevalent debate with the rapid evolution and sophistication of technology, this is something I have been considering lately. I've only truly come to understand the contractual agreement you enter into with Google, Instagram, Facebook, TikTok, Twitter, etc... when you create an account or use their services. I expect that my information is being used in no more significant a capacity than just simple demographic facts about myself which allow them to target my ads more appropriately. However, I feel uneasy that this is likely not all they are able and allowed to glean from my various searches and profiles, and I would expect them to maintain the level of privacy I request by creating only private accounts. I also expect them to use my information internally and refuse to sell it to third-parties whom I have not agreed to share any data or information with, although I doubt this is something that never occurs unfortunately. 
+
+As someone who analyzes others I think there is a great amount of responsibility and trust to be kept. The most basic level is that those who you are collecting data from have given you consent and completely comprehend who you plan to share that data with and how anonymous their identity will stay. If this clause is met, I think it's incredibly important not to stray from your agreed-upon contract and that you are careful to withhold any information that's not pertinent to your study/project and carefully discard any information which you collect and is not necessary to maintain. Subsequently, it is paramount that the data is appropriately encrypted and stored with regard to it's level of sensitivity. Although you may not plan to share the data, it's your responsibility to ensure that your client/subjects agreement is upheld and no one is able to obtain the data without your/their knowledge or consent. If all of these criteria are met and all data is collected ethically, then I believe you have upheld your responsibilities as an analytic.
+
+

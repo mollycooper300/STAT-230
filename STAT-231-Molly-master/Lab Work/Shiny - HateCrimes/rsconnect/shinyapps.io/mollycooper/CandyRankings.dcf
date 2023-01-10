@@ -1,0 +1,12 @@
+name: CandyRankings
+title: CandyRankings
+username:
+account: mollycooper
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2836914
+bundleId: 3642334
+url: https://mollycooper.shinyapps.io/CandyRankings/
+when: 1600399354.26915
+asMultiple: FALSE
+asStatic: FALSE

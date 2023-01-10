@@ -1,0 +1,143 @@
+---
+title: "STAT 231: Problem Set 8B"
+author: "Molly Cooper"
+date: "due by 5 PM on Friday, November 6"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+This homework assignment is designed to help you further ingest, practice, and expand upon the material covered in class over the past week(s).  You are encouraged to work with other students, but all code and text must be written by you, and you must indicate below who you discussed the assignment with (if anyone).  
+
+Steps to proceed:
+
+\begin{enumerate}
+\item In RStudio, go to File > Open Project, navigate to the folder with the course-content repo, select the course-content project (course-content.Rproj), and click "Open" 
+\item Pull the course-content repo (e.g. using the blue-ish down arrow in the Git tab in upper right window)
+\item Copy ps8B.Rmd from the course repo to your repo (see page 6 of the GitHub Classroom Guide for Stat231 if needed)
+\item Close the course-content repo project in RStudio
+\item Open YOUR repo project in RStudio
+\item In the ps8B.Rmd file in YOUR repo, replace "YOUR NAME HERE" with your name
+\item Add in your responses, committing and pushing to YOUR repo in appropriate places along the way
+\item Run "Knit PDF" 
+\item Upload the pdf to Gradescope.  Don't forget to select which of your pages are associated with each problem.  \textit{You will not get credit for work on unassigned pages (e.g., if you only selected the first page but your solution spans two pages, you would lose points for any part on the second page that the grader can't see).} 
+\end{enumerate}
+
+```{r, setup, include=FALSE}
+library(tidyverse)
+library(maps)
+library(datasets)
+library(gapminder)
+library(viridis)
+
+knitr::opts_chunk$set(
+  tidy=FALSE,     # display code as typed
+  size="small")   # slightly smaller font for code
+```
+
+
+\newpage 
+# If you discussed this assignment with any of your peers, please list who here:
+
+> ANSWER:
+
+\newpage
+# 1. Mapping spatial data 
+
+Reproduce the map you created for Lab08-spatial (and finish it if you didn't in class). In 2-4 sentences, interpret the visualization.  What stands out as the central message?  
+
+NOTE: you do NOT need to say what colors are representing what feature (e.g, NOT:  "In this map, I've colored the countries by GDP, with green representing low values and red representing high values") -- this is obvious to the viewer, assuming there's an appropriate legend and title.  Rather, what *information* do you extract from the visualization? (e.g., "From the choropleth below, we can see that the percent change in GDP per capita  between 1957-2007 varies greatly across countries in Central America.  In particular, Panama and Costa Rica stand out as having GDPs per capita that increased by over 200% across those 50 years.  In contrast, Nicaragua's GDP per capita decreased by a small percentage during that same time span.")
+
+> ANSWER:  My visualization represents the literacy rate of youth, ages 15-24, determined by the ability to read and write a short simple statement in, generally, third-world and socio-economically struggling countries. Simply by recognizing the countries excluded from the map, we can infer that countries within more developed regions tend to have high enough rates of literacy. We can then determine that countries farther from more developed have by far the lowest rates of (basic) literacy in their youth, while countries closer to more developed regions tend to have much higher literacy rates. For example, all of the countries with the lowest literacy rates are located within Africa, while countries in the Americas and Europe have on average fairly high literacy rates even though they may be less socioeconomically developed in comparison. 
+
+```{r}
+# loading gapminder package
+library(gapminder)
+gapminder <- gapminder::gapminder
+# loading literacy data from UNESCO
+path_in <- "/Users/mollycooper/Downloads/literacy_rate_youth_total_percent_of_people_ages_15_24.csv"
+#wrangling dataset
+literacydata <- read_csv(path_in) %>%
+  select(country, `2011`)
+
+#adding map data
+library(maps)
+data(worldMapEnv) 
+
+# then merge with mapping dataset
+literacymap <- literacydata %>%
+  right_join(world_map, by = c("country" = "region"))
+
+#creating map
+ggplot(literacymap, aes(x = long, y = lat, group = group
+                      , fill = `2011`)) +
+  geom_polygon(color = "white") +
+  theme_void() +
+  coord_fixed(ratio = 1.3) +
+  labs(fill = "Literacy Rate of Youth 15-24 (1.0 = 100%)") +
+  theme(legend.position="bottom") +
+  scale_fill_distiller(palette = "BuPu", direction = "horizantle")
+```
+
+\newpage
+# 2. Mapping spatial data at a different level
+
+Create a map at the world, country, or county level based on the choices provided in lab08-spatial, that is at a DIFFERENT level than the map you created for the lab (and included above).  For instance, if you created a map of US counties for the lab, then choose a country or world map to create here.
+
+Note: While I recommend using one of the datasets provided in the lab so you don't spend a lot of time searching for data, you are not strictly required to use one of those datasets.  You could, for instance, create a static map that might be relevant to your project (so long as it's at a different level than your map above).  
+
+Describe one challenge you encountered (if any) while creating this map.
+
+> ANSWER: The greatest challenge I encountered was in the data wrangling process. I had trouble determining how to most accuratly average the job quotients provided in terms of metropolitan areas per state to an overall average per state. I believe taking the average of those within each state was the most reasonable metric considering differences in size and density, but it was still a strange process to decifer, it was also difficult to find a way to consider states with more rural populations, but this was the best overall way I could think to do it. 
+
+
+```{r}
+#loading data
+library(fivethirtyeight)
+data(librarians)
+
+#wrangling librarian dataset
+librariandata <- librarians %>%
+  select(prim_state, jobs_1000) %>%
+  group_by(prim_state) %>%
+  summarise(avg_jobs_1000 = mean(jobs_1000))
+
+#merging with map dataset
+data(state)
+librarianmap <- librariandata %>%
+  left_join(state_info, by = c("prim_state" = "State")) %>%
+  right_join(usa_states, by = c("state_full" = "region")) 
+
+#creating map
+ggplot(librarianmap, aes(x = long, y = lat, group = group
+                      , fill = avg_jobs_1000)) +
+  geom_polygon(color = "white") +
+  theme_void() +
+  coord_fixed(ratio = 1.3) +
+  labs(title = "Where Are America's Librarians"
+       , subtitle = "A Look at the Density by State"
+       , caption = "*Scale represents average number of librarians per 1,000 residents in metropolitan areas."
+       , fill = "") +
+  scale_fill_viridis(option = "magma", direction = -1) 
+  #scale_fill_viridis(option = "plasma", direction = -1)
+
+
+```
+
+
+
+\newpage
+# 3. Ethics follow-up
+
+(a) Thinking about the discussion you had with the first group you were with during class last Thursday (focused on either "Predicting Policing & Recidivism" or "Predicting Financial Risk"), did your perspective on, or understanding of, any of the questions shift?  If so, please describe.  If not, was there anything you found surprising in the resources or your first group discussion?
+
+> ANSWER: I think the issue of Predicting Policing and Recidivism is an interesting one. I just did a project on the use of AI technology in the Judicial system and how this technology with or without intention utilizes biases in it's sentencing. Given the political and social tension surrounding policing, it is without question why utilizing technology could make the system in place less biased and more standardized. However, considering that these algorithms often utilize statistics to calculate a decision, it is natural that a bias would be called into question. However, it doesn't discount the fact that people are more likely to have stronger and more internalized prejudice when it comes to making decisions. I believe that overall, the implimentation of technology in policing and justice is a positive step in the right direction. However, I think there needs to be an almost equal element of human interaction involved. Compassion plays a large role in these decisions and it is without a real person consulting and checking the technological conclusions that a fair decision can be made. However, I think the technology should also act as a check to human biases in situations where objectivity is the ultimate driver behind a reasoned decision. As it stands, the technological implimentations in the Justice system are too new to be perfect. Yet, the ideas behind this strategy is generally noble, and with concerted attention and time, using technology will bring a positive objectivity to a system which is clearly corrupt. 
+
+(b) Thinking about the discussion you had with the second group you were with during class last Thursday (focused on considering the use of algorithms in the college admissions processs), did your perspective on, or understanding of, the use of algorithms in these contexts shift?  If not, was there anything you found surprising in the resources or your second group discussion?
+
+> ANSWER: The use of algorithms in college admissions and job hiring is something I've been contemplating a lot lately as a college student who is beginning to maneuver the job market of large companies. Where the system stands, there are a great number of flaws surrounding diversity quotas and biased practices which are ultimatly harming the admission prejudice they were intended to fix. I think that technology should be increasingly utilized in an objective manner to increase the equity of recruiting, yet there should always be an element of human interaction involved in the ultimate decision making. Often race, ethnicity, socio-economic status, and geography are some of the largest players in the admissions process, and while it's important to strive for diverse environments it's also important to ensure all students and employees are the right fit for their environment. I think technology should be utlized as an initial step in significantly narrowing candidate pools, but at least one round of interviewing or human review is essential to ensure someone is the right fit. Without meeting someone how could you know they are the best fit for a workplace and similar reasoning for college admission essays. Technology should be utilized to control initial prejudices, and once a pool of perfectly qualified and equal candidates is recognized, while it's imperfect, I don't see a way to cut out human interaction in the final step of these processees. 
+
+
+
+
